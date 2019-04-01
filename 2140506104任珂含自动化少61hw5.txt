@@ -1,0 +1,178 @@
+%%%%%%%%%%%%%    T1   低通%%%%%%%%%%%%%%%
+clear all;clc;
+i1=imread('test1.pgm');
+% i1=imread('test2.tif');
+[p,q]=size(i1);
+m=2*p;n=2*q;
+[u,v]=dftuv(m,n);
+Fi1=fft2(i1,m,n);
+% imgFi1=fftshift(Fi1);
+figure; imshow(log(1 + abs(fftshift(Fi1))),[]); title("test1");%saveas(gcf,'FI1.png');%原图频谱
+D = sqrt(u .^ 2 + v .^ 2);  
+D0 = 80; 
+GL =exp(- D .^ 2 ./ (2 * D0 ^ 2));  % 高斯低通滤波器
+n0 = 2;BL =1 ./ (1 + (D ./ D0) .^ (2 * n0));  % 巴特沃斯低通滤波器
+figure; 
+subplot(1,2,1); mesh(fftshift(GL)); title(['GLPF线框图','D0=',num2str(D0)]);
+subplot(1,2,2);mesh(fftshift(BL)); title(['BLPF线框图','D0=',num2str(D0)]);
+%saveas(gcf,'D020.png');
+IGAU = Fi1 .* GL;  
+IBUT = Fi1 .* BL;  
+iGAU = dftfilt(i1,GL);% 高斯低通滤波后
+iBUT= dftfilt(i1,BL);% 巴特沃斯低通滤波后
+%%%功率谱比
+a1 = 0; 
+ga1 = 0; ba1 = 0; 
+for j = 1:1:p
+    for k = 1:1:q
+        a1 = a1 + (abs(Fi1(j,k))) ^ 2;  
+        ga1 = ga1 + (abs(IGAU(j,k))) ^ 2;
+        ba1 = ba1 + (abs(IBUT(j,k))) ^ 2;
+
+    end
+end
+glb_gau = ga1 / a1;  
+glb_but = ba1 / a1;
+figure;
+subplot(1,3,1); imshow(i1); title('原图'); 
+subplot(1,3,2);imshow(iGAU,[ ]);  title(['高斯滤波平滑','D0=',num2str(D0),'功率谱比 ',num2str(glb_gau)]);
+subplot(1,3,3);imshow(iBUT,[ ]);  title(['巴特沃斯滤波平滑','D0=',num2str(D0),'功率谱比 ',num2str(glb_but)]);
+%saveas(gcf,'t1.png');
+
+
+
+function [ U,V ] = dftuv( M, N )
+%DFTUV 实现频域滤波器的网格函数
+%   Detailed explanation goes here
+u = 0:(M - 1);
+v = 0:(N - 1);
+idx = find(u > M/2); %找大于M/2的数据
+u(idx) = u(idx) - M; %将大于M/2的数据减去M
+idy = find(v > N/2);
+v(idy) = v(idy) - N;
+[V, U] = meshgrid(v, u);      
+end
+function g = dftfilt(f,H)
+F=fft2(f,size(H,1),size(H,2));
+g=real(ifft2(H.*F));
+ g=g(1:size(f,1),1:size(f,2));
+end
+
+
+
+
+%%%%%%%%%%%%%   T2   高通%%%%%%%%%%%%%%
+clear all;clc;
+%i1 = imread('test3_corrupt.pgm');
+i1 = imread('test4 copy.bmp');
+[p,q]=size(i1);
+m=2*p;n=2*q;
+[u,v]=dftuv(m,n);
+Fi1=fft2(i1,m,n);
+% imgFi1=fftshift(Fi1);
+%figure; imshow(log(1 + abs(fftshift(Fi1))),[]); title("test4");saveas(gcf,'FI4.png');%原图频谱
+D = sqrt(u .^ 2 + v .^ 2);  
+D0 = 80; 
+GL =1-exp(- D .^ 2 ./ (2 * D0 ^ 2));  % 高斯高通滤波器
+n0 = 2;BL =1-1 ./ (1 + (D ./ D0) .^ (2 * n0));  % 巴特沃斯高通滤波器
+% figure; 
+% subplot(1,2,1); mesh(fftshift(GL)); title(['GHPF线框图','D0=',num2str(D0)]);
+% subplot(1,2,2);mesh(fftshift(BL)); title(['BHPF线框图','D0=',num2str(D0)]);
+%saveas(gcf,'D020.png');
+IGAU = Fi1 .* GL;  
+IBUT = Fi1 .* BL;  
+iGAU = dftfilt(i1,GL);% 高斯低通滤波后
+iBUT= dftfilt(i1,BL);% 巴特沃斯低通滤波后
+%%%功率谱比
+a1 = 0; 
+ga1 = 0; ba1 = 0; 
+for j = 1:1:p
+    for k = 1:1:q
+        a1 = a1 + (abs(Fi1(j,k))) ^ 2;  
+        ga1 = ga1 + (abs(IGAU(j,k))) ^ 2;
+        ba1 = ba1 + (abs(IBUT(j,k))) ^ 2;
+
+    end
+end
+glb_gau = ga1 / a1;  
+glb_but = ba1 / a1;
+figure;
+subplot(1,3,1); imshow(i1); title('原图'); 
+subplot(1,3,2);imshow(iGAU,[ ]);  title(['高斯滤波增强','D0=',num2str(D0),'功率谱比 ',num2str(glb_gau)]);
+subplot(1,3,3);imshow(iBUT,[ ]);  title(['巴特沃斯滤波增强','D0=',num2str(D0),'功率谱比 ',num2str(glb_but)]);
+%saveas(gcf,'t1.png');
+
+
+%%%%函数
+function [ U,V ] = dftuv( M, N )
+%DFTUV 实现频域滤波器的网格函数
+%   Detailed explanation goes here
+u = 0:(M - 1);
+v = 0:(N - 1);
+idx = find(u > M/2); %找大于M/2的数据
+u(idx) = u(idx) - M; %将大于M/2的数据减去M
+idy = find(v > N/2);
+v(idy) = v(idy) - N;
+[V, U] = meshgrid(v, u);      
+end
+
+function g = dftfilt(f,H)
+F=fft2(f,size(H,1),size(H,2));
+g=real(ifft2(H.*F));
+ g=g(1:size(f,1),1:size(f,2));
+end
+
+
+%%%%%%%%%%%%%   T3   其他高通%%%%%%%%%%%%%%
+clear all;clc;
+i1 = imread('test3_corrupt.pgm');
+%i1 = imread('test4 copy.bmp');
+[p,q]=size(i1);
+m=2*p;n=2*q;
+[u,v]=dftuv(m,n);
+Fi1=fft2(i1,m,n);
+% imgFi1=fftshift(Fi1);
+%figure; imshow(log(1 + abs(fftshift(Fi1))),[]); title("test4");saveas(gcf,'FI4.png');%原图频谱
+D = sqrt(u .^ 2 + v .^ 2);  
+D0 = 10;
+LA = 1+ 4 * (pi*pi )* D .^ 2;  % 拉普拉斯高通滤波器（书4.9-9
+UM =1 * (1 - exp(- D .^ 2 ./ (2 * D0 ^ 2)));  %k=1钝化模板加原图之前（加原图看不出来
+%figure; mesh(fftshift(LA)); title('拉普拉斯线框图');
+ figure;mesh(fftshift(UM)); title(['钝化模板线框图','D0=',num2str(D0)]);
+ %saveas(gcf,'D020.png');
+UM50 =1 * (1 - exp(- D .^ 2 ./ (2 * 50*50)));  %k=1钝化模板
+UM80 =1 * (1 - exp(- D .^ 2 ./ (2 * 80 ^ 2)));  %k=1钝化模板
+
+ILA = Fi1 .* LA;  
+IUM = Fi1 .* UM;  
+iLA = dftfilt(i1,LA);% Laplacian
+iUM= dftfilt(i1,UM);% unsharpmasking
+iUM50= dftfilt(i1,UM50);% unsharpmasking
+iUM80= dftfilt(i1,UM80);% unsharpmasking
+figure;
+subplot(1,3,1); imshow(i1); title('原图'); 
+subplot(1,3,2);imshow(iLA,[ ]);  title('拉普拉斯增强');
+subplot(1,3,3);imshow(iUM50,[ ]);  title('钝化模板增强 D0=50');
+%saveas(gcf,'t1.png');
+figure;
+subplot(1,3,1); imshow(iUM,[ ]); title('钝化模板增强 D0=10'); 
+subplot(1,3,2);imshow(iUM50,[ ]);  title('钝化模板增强 D0=50');
+subplot(1,3,3);imshow(iUM80,[ ]);  title('钝化模板增强 D0=80');
+
+%%%%函数
+function [ U,V ] = dftuv( M, N )
+%DFTUV 实现频域滤波器的网格函数
+%   Detailed explanation goes here
+u = 0:(M - 1);
+v = 0:(N - 1);
+idx = find(u > M/2); %找大于M/2的数据
+u(idx) = u(idx) - M; %将大于M/2的数据减去M
+idy = find(v > N/2);
+v(idy) = v(idy) - N;
+[V, U] = meshgrid(v, u);      
+end
+function g = dftfilt(f,H)
+F=fft2(f,size(H,1),size(H,2));
+g=real(ifft2(H.*F));
+ g=g(1:size(f,1),1:size(f,2));
+end
